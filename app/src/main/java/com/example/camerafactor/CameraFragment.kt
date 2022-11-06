@@ -64,24 +64,40 @@ class CameraFragment : Fragment() {
         val cameraProviderFuture = ProcessCameraProvider.getInstance(binding.cameraView.context)
 
         cameraProviderFuture.addListener({
+            // Used to bind the lifecycle of cameras to the lifecycle owner
             val cameraProvider: ProcessCameraProvider = cameraProviderFuture.get()
+
+            // Preview
             val preview = Preview.Builder()
                 .build()
                 .also {
                     it.setSurfaceProvider(binding.cameraView.surfaceProvider)
                 }
-            val cameraSelector = CameraSelector.DEFAULT_BACK_CAMERA
-            try {
-                cameraProvider.unbindAll()
-                cameraProvider.bindToLifecycle(
-                    this, cameraSelector, preview)
-            } catch(exc: Exception) {
 
+            imageCapture = ImageCapture.Builder()
+                .build()
+
+            // Select back camera as a default
+            val cameraSelector = CameraSelector.DEFAULT_BACK_CAMERA
+
+            try {
+                // Unbind use cases before rebinding
+                cameraProvider.unbindAll()
+
+                // Bind use cases to camera
+                cameraProvider.bindToLifecycle(
+                    this, cameraSelector, preview, imageCapture)
+
+            } catch(exc: Exception) {
+                Log.e(TAG, "Use case binding failed", exc)
             }
-        }, ContextCompat.getMainExecutor(binding.cameraView.context))
+
+        }, ContextCompat.getMainExecutor(binding.root.context))
+
     }
 
     private fun takePhoto() {
+
         // Get a stable reference of the modifiable image capture use case
         val imageCapture = imageCapture ?: return
 
@@ -92,27 +108,28 @@ class CameraFragment : Fragment() {
             put(MediaStore.MediaColumns.DISPLAY_NAME, name)
             put(MediaStore.MediaColumns.MIME_TYPE, "image/jpeg")
             if(Build.VERSION.SDK_INT > Build.VERSION_CODES.P) {
-                put(MediaStore.Images.Media.RELATIVE_PATH, "Pictures/CameraX-Image")
+                put(MediaStore.Images.Media.RELATIVE_PATH, "Pictures/CameraFactor")
             }
         }
 
         // Create output options object which contains file + metadata
         val outputOptions = ImageCapture.OutputFileOptions
-            .Builder(binding.root.context.contentResolver,
+            .Builder(binding.cameraView.context.contentResolver,
                 MediaStore.Images.Media.EXTERNAL_CONTENT_URI,
                 contentValues)
             .build()
 
         // Set up image capture listener, which is triggered after photo has
         // been taken
+        Toast.makeText(binding.root.context, outputOptions.toString(), Toast.LENGTH_SHORT).show()
+
         imageCapture.takePicture(
             outputOptions,
-            ContextCompat.getMainExecutor(binding.root.context),
+            ContextCompat.getMainExecutor(binding.cameraView.context),
             object : ImageCapture.OnImageSavedCallback {
                 override fun onError(exc: ImageCaptureException) {
                     Log.e(TAG, "Photo capture failed: ${exc.message}", exc)
                 }
-
                 override fun
                         onImageSaved(output: ImageCapture.OutputFileResults){
                     val msg = "Photo capture succeeded: ${output.savedUri}"
@@ -122,6 +139,7 @@ class CameraFragment : Fragment() {
             }
         )
     }
+
     companion object {
         private const val TAG = "CameraXApp"
         private const val FILENAME_FORMAT = "yyyy-MM-dd-HH-mm-ss-SSS"
