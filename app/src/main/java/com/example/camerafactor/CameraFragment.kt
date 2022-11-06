@@ -47,7 +47,6 @@ class CameraFragment : Fragment() {
         inflater: LayoutInflater, container: ViewGroup?,
         savedInstanceState: Bundle?
     ): View? {
-        // Inflate the layout for this fragment
         binding = FragmentCameraBinding.inflate(inflater, container, false)
         return binding.root
     }
@@ -64,10 +63,8 @@ class CameraFragment : Fragment() {
         val cameraProviderFuture = ProcessCameraProvider.getInstance(binding.cameraView.context)
 
         cameraProviderFuture.addListener({
-            // Used to bind the lifecycle of cameras to the lifecycle owner
             val cameraProvider: ProcessCameraProvider = cameraProviderFuture.get()
 
-            // Preview
             val preview = Preview.Builder()
                 .build()
                 .also {
@@ -77,14 +74,10 @@ class CameraFragment : Fragment() {
             imageCapture = ImageCapture.Builder()
                 .build()
 
-            // Select back camera as a default
             val cameraSelector = CameraSelector.DEFAULT_BACK_CAMERA
 
             try {
-                // Unbind use cases before rebinding
                 cameraProvider.unbindAll()
-
-                // Bind use cases to camera
                 cameraProvider.bindToLifecycle(
                     this, cameraSelector, preview, imageCapture)
 
@@ -97,11 +90,7 @@ class CameraFragment : Fragment() {
     }
 
     private fun takePhoto() {
-
-        // Get a stable reference of the modifiable image capture use case
         val imageCapture = imageCapture ?: return
-
-        // Create time stamped name and MediaStore entry.
         val name = SimpleDateFormat(FILENAME_FORMAT, Locale.US)
             .format(System.currentTimeMillis())
         val contentValues = ContentValues().apply {
@@ -111,28 +100,22 @@ class CameraFragment : Fragment() {
                 put(MediaStore.Images.Media.RELATIVE_PATH, "Pictures/CameraFactor")
             }
         }
-
-        // Create output options object which contains file + metadata
         val outputOptions = ImageCapture.OutputFileOptions
             .Builder(binding.cameraView.context.contentResolver,
                 MediaStore.Images.Media.EXTERNAL_CONTENT_URI,
                 contentValues)
             .build()
 
-        // Set up image capture listener, which is triggered after photo has
-        // been taken
-        Toast.makeText(binding.root.context, outputOptions.toString(), Toast.LENGTH_SHORT).show()
-
         imageCapture.takePicture(
             outputOptions,
             ContextCompat.getMainExecutor(binding.cameraView.context),
             object : ImageCapture.OnImageSavedCallback {
                 override fun onError(exc: ImageCaptureException) {
-                    Log.e(TAG, "Photo capture failed: ${exc.message}", exc)
+                    Log.e(TAG, "Captura de fotografía fallida: ${exc.message}", exc)
                 }
                 override fun
                         onImageSaved(output: ImageCapture.OutputFileResults){
-                    val msg = "Photo capture succeeded: ${output.savedUri}"
+                    val msg = "Fotografía guardada correctamente: ${output.savedUri}"
                     Toast.makeText(binding.root.context, msg, Toast.LENGTH_SHORT).show()
                     Log.d(TAG, msg)
                 }
